@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv/
+venv/
+env/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Data & Models (thường không nên push lên Git vì bị nặng)
+*.csv
+*.parquet
+*.pkl
+*.joblib
+
+# Ẩn thư mục có tên "raw" (và tất cả nội dung bên trong nó)
+raw/
+
+# Ẩn file có phần đuôi là ".raw"
+*.raw
