@@ -1,0 +1,31 @@
+name: multi_agent_churn
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.10
+  - pandas
+  - numpy
+  - scikit-learn
+  - matplotlib
+  - seaborn
+  - jupyter
+  - pip
+  - pip:
+    - crewai
+    - crewai-tools
+    - pyautogen
+    - langgraph
+    - langchain
+    - langchain-openai
+    - "fastapi[all]"
+    - celery
+    - psycopg2-binary
+    - pymongo
+    - kafka-python
+    - pika
+    - docker
+    - imbalanced-learn
+    - xgboost
+    - lightgbm
+    - tensorflow

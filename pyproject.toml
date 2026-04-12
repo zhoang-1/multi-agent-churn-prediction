@@ -1,0 +1,27 @@
+# Đặt file này tại thư mục gốc của dự án (cùng cấp với thư mục src/)
+
+[build-system]
+# Khai báo hệ thống build và các công cụ cần thiết
+requires = ["setuptools>=64.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "churn_prediction"
+version = "0.1.0"
+description = "A project for predicting customer churn"
+readme = "README.md"
+authors = [{name = "Your Name", email = "your.email@example.com"}]
+license = {text = "MIT"}
+requires-python = ">=3.8"
+dependencies = [
+    "pandas>=1.3.0",
+    "numpy>=1.21.0",
+    "scikit-learn>=1.0.0",
+    "matplotlib>=3.4.0",
+    "seaborn>=0.11.0",
+    "jupyter>=1.0.0",
+]
+
+# Cấu hình cho setuptools để tự động tìm package trong thư mục src/
+[tool.setuptools.packages.find]
+where = ["src"]
