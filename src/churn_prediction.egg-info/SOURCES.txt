@@ -5,4 +5,5 @@ src/churn_prediction/paths.py
 src/churn_prediction.egg-info/PKG-INFO
 src/churn_prediction.egg-info/SOURCES.txt
 src/churn_prediction.egg-info/dependency_links.txt
+src/churn_prediction.egg-info/requires.txt
 src/churn_prediction.egg-info/top_level.txt

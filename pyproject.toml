@@ -2,7 +2,7 @@
 
 [build-system]
 # Khai báo hệ thống build và các công cụ cần thiết
-requires = ["setuptools>=64.0", "wheel"]
+requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -10,7 +10,7 @@ name = "churn_prediction"
 version = "0.1.0"
 description = "A project for predicting customer churn"
 readme = "README.md"
-authors = [{name = "Your Name", email = "your.email@example.com"}]
+authors = [{name = "huyhoang", email = "huyhoangzzzzb@gmail.com"}]
 license = {text = "MIT"}
 requires-python = ">=3.8"
 dependencies = [
@@ -25,3 +25,5 @@ dependencies = [
 # Cấu hình cho setuptools để tự động tìm package trong thư mục src/
 [tool.setuptools.packages.find]
 where = ["src"]
+[tool.setuptools]
+package-data = { "churn_prediction" = ["data/*.csv"] }
