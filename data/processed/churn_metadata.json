@@ -1,0 +1,13 @@
+{
+  "churn_threshold_days": 90,
+  "churn_rate": 0.8994338994338994,
+  "churned_count": 86432,
+  "active_count": 9664,
+  "churn_levels": {
+    "churned": 86432,
+    "high_risk": 7990,
+    "at_risk": 1665,
+    "active": 9
+  },
+  "date_processed": "2026-05-22 10:03:32"
+}
