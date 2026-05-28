@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
 
 # Environments
 .env
@@ -23,3 +24,13 @@ raw/
 
 # Ẩn file có phần đuôi là ".raw"
 *.raw
+
+data/
+models/
+*.csv
+*.pkl
+*.h5
+*.npy
+node_modules/
+dist/
+build/
