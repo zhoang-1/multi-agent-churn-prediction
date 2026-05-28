@@ -34,3 +34,7 @@ models/
 node_modules/
 dist/
 build/
+
+*.npy
+models/*.npy
+models/*.pkl
