@@ -30,8 +30,10 @@ std_items_per_order
 weekend_purchase_ratio
 night_purchase_ratio
 total_orders
-level_1
-order_purchase_timestamp
+avg_gap
+std_gap
+max_gap
+trend_gap
 avg_installments
 favorite_payment_type
 credit_card_ratio
