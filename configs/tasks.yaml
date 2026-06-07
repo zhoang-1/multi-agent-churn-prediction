@@ -1,0 +1,30 @@
+explore_data_task:
+  description: "1. Đọc dữ liệu từ thư mục `data/raw/`.
+                2. Kiểm tra chất lượng dữ liệu: missing values, duplicates, outliers.
+                3. Đánh giá tỷ lệ mất cân bằng giữa Churn và Non-Churn.
+                4. Lưu báo cáo chất lượng dữ liệu vào `data/processed/data_quality_report.txt`."
+  expected_output: "Một báo cáo chi tiết về chất lượng dữ liệu, bao gồm các vấn đề phát hiện và đề xuất hướng xử lý."
+  agent: data_explorer_agent
+
+feature_engineering_task:
+  description: "Sử dụng kết quả từ `explore_data_task` (báo cáo chất lượng dữ liệu) và chạy các bước xử lý đặc trưng như đã code sẵn trong `feature_processing.py`. Đảm bảo dữ liệu đầu ra đã được:
+                - Lọc và lựa chọn đặc trưng phù hợp.
+                - Encode các biến phân loại.
+                - Scale các biến số.
+                - Xử lý mất cân bằng dữ liệu bằng SMOTE.
+                Lưu tập dữ liệu đã xử lý vào `data/processed/features.csv`."
+  expected_output: "Tập dữ liệu đã được xử lý hoàn chỉnh, sẵn sàng cho việc huấn luyện mô hình."
+  agent: feature_engineer_agent
+  context: [explore_data_task]  # Quan trọng: nhiệm vụ này phụ thuộc vào kết quả của explore_data_task
+
+train_model_task:
+  description: "Sử dụng dữ liệu đã xử lý từ `feature_engineering_task` để huấn luyện các mô hình XGBoost, LightGBM, Random Forest. Tiến hành tinh chỉnh tham số để tìm ra mô hình tốt nhất. Lưu mô hình và các tham số của nó vào `models/checkpoints/best_model.pkl`."
+  expected_output: "Mô hình học máy tốt nhất đã được lưu, kèm theo báo cáo các chỉ số đánh giá (accuracy, precision, recall, F1, AUC)."
+  agent: model_trainer_agent
+  context: [feature_engineering_task]  # Phụ thuộc vào dữ liệu đã xử lý
+
+analyze_business_task:
+  description: "Từ mô hình tốt nhất và các feature importance, phân tích các yếu tố chính dẫn đến việc khách hàng rời bỏ. Đề xuất các chiến dịch marketing cụ thể nhằm giữ chân khách hàng. Tạo một báo cáo tổng hợp bằng markdown và lưu vào `reports/final_report.md`."
+  expected_output: "Một báo cáo phân tích doanh nghiệp hoàn chỉnh, bao gồm các insight về hành vi khách hàng và các khuyến nghị chiến lược."
+  agent: business_analyst_agent
+  context: [train_model_task]  # Phụ thuộc vào kết quả huấn luyện mô hình

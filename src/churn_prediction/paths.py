@@ -25,7 +25,7 @@ FIGURES_DIR = REPORTS_DIR / "figures"           # Lưu hình ảnh, biểu đồ
 LOGS_DIR = REPORTS_DIR / "logs"                 # Lưu log files
 METRICS_DIR = REPORTS_DIR / "metrics"           # Lưu kết quả đánh giá model
 # CONFIG & ENVIRONMENT
-CONFIG_DIR = PROJECT_ROOT / "config"            # File cấu hình (yaml, json)
+CONFIG_DIR = PROJECT_ROOT / "configs"            # File cấu hình (yaml, json)
 ENV_DIR = PROJECT_ROOT / "env"                  # Môi trường ảo, requirements.txt
 # NOTEBOOKS
 NOTEBOOKS_DIR = PROJECT_ROOT / "notebook"       # Tất cả notebook

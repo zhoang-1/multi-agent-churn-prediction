@@ -1,0 +1,98 @@
+Bộ dữ liệu olist
+
+ Mục tiêu : Olist dùng để xây dựng mô hình dự đoán rủi ro trải nghiệm khách hàng.
+---------------------------
+
+
+=========================================
+Bộ dữ liệu Online Retail II 
+
+Mục tiêu: Online Retail II dùng để xây dựng mô hình dự đoán rủi ro rời bỏ khách hàng.
+------------------------------
+
+
+
+=> Hai mô hình được kết hợp trong kiến trúc Multi-Agent để hỗ trợ bài toán Customer Retention.
+
+notebooks/
+
+├── olist/
+│
+│   01_eda.ipynb
+│   02_feature_engineering.ipynb
+│   03_experience_labeling.ipynb
+│   04_model_training.ipynb
+│   05_model_explainability.ipynb
+│
+├── online_retail/
+│
+│   01_eda.ipynb
+│   02_rfm_clv.ipynb
+│   03_churn_labeling.ipynb
+│   04_feature_engineering.ipynb
+│   05_model_training.ipynb
+│   06_model_explainability.ipynb
+│
+└── experiments/
+    │
+    01_smote_vs_no_smote.ipynb
+    02_xgb_vs_lgbm.ipynb
+    03_feature_selection.ipynb
+
+Cấu trúc thư mục
+customer_retention_ai/
+
+├── data/
+│
+│   ├── olist/
+│   │   ├── raw/
+│   │   └── processed/
+│   │
+│   └── online_retail/
+│       ├── raw/
+│       └── processed/
+│
+├── src/
+│
+│   ├── experience/
+│   │
+│   │   ├── data_loader.py
+│   │   ├── feature_engineering.py
+│   │   ├── label_builder.py
+│   │   ├── train.py
+│   │   ├── predict.py
+│   │   └── evaluate.py
+│   │
+│   ├── loyalty/
+│   │
+│   │   ├── data_loader.py
+│   │   ├── rfm.py
+│   │   ├── clv.py
+│   │   ├── churn_label.py
+│   │   ├── feature_engineering.py
+│   │   ├── train.py
+│   │   └── evaluate.py
+│   │
+│   ├── agents/
+│   │
+│   │   ├── experience_agent.py
+│   │   ├── loyalty_agent.py
+│   │   ├── churn_agent.py
+│   │   └── retention_agent.py
+│   │
+│   ├── tools/
+│   │
+│   │   ├── feature_tool.py
+│   │   ├── model_tool.py
+│   │   ├── rfm_tool.py
+│   │   ├── churn_tool.py
+│   │   └── report_tool.py
+│   │
+│   └── app.py
+│
+├── models/
+│
+│   ├── experience_model.pkl
+│   └── churn_model.pkl
+│
+└── reports/
