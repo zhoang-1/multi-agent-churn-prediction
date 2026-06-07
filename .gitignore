@@ -15,6 +15,7 @@ env/
 
 # Data & Models (thường không nên push lên Git vì bị nặng)
 *.csv
+*.xlsx
 *.parquet
 *.pkl
 *.joblib

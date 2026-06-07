@@ -4,15 +4,26 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 # DATA DIRECTORIES
 DATA_DIR     = PROJECT_ROOT / "data"
-RAW_DIR      = DATA_DIR / "raw"
-PROCESSED_DIR = DATA_DIR / "processed"   # Dữ liệu đã clean, sẵn sàng cho feature engineering
-FEATURES_DIR = DATA_DIR / "features"     # Dữ liệu sau feature engineering
-EXTERNAL_DIR = DATA_DIR / "external"     # Dữ liệu từ bên ngoài (nếu có)
-INTERIM_NOTEBOOK_DIR = DATA_DIR / "interim/notebook_related" # Dữ liệu tạm thời trong quá trình phân tích, có thể xóa sau khi hoàn thành notebook
-INTERIM_CLI_DIR = DATA_DIR / "interim/cli_related"     # Dữ liệu tạm thời trong quá trình phát triển CLI, có thể xóa sau khi hoàn thành CLI
-
+# data olist
+OLIST_DIR    = DATA_DIR / "olist"
+RAW_DIR      = OLIST_DIR / "raw"
+PROCESSED_DIR = OLIST_DIR / "processed"   # Dữ liệu đã clean, sẵn sàng cho feature engineering
+FEATURES_DIR = OLIST_DIR / "features"     # Dữ liệu sau feature engineering
+EXTERNAL_DIR = OLIST_DIR / "external"     # Dữ liệu từ bên ngoài (nếu có)
+INTERIM_NOTEBOOK_DIR = OLIST_DIR / "interim/notebook_related" # Dữ liệu tạm thời trong quá trình phân tích, có thể xóa sau khi hoàn thành notebook
+INTERIM_CLI_DIR = OLIST_DIR / "interim/cli_related"     # Dữ liệu tạm thời trong quá trình phát triển CLI, có thể xóa sau khi hoàn thành CLI
+# data online_retail
+ONLINE_RETAIL_DIR = DATA_DIR / "online_retail"
+ONLINE_RETAIL_RAW_DIR = ONLINE_RETAIL_DIR / "raw"
+PROCESSED_ONLINE_RETAIL_DIR = ONLINE_RETAIL_DIR / "processed"
+FEATURES_ONLINE_RETAIL_DIR = ONLINE_RETAIL_DIR / "features"
+EXTERNAL_ONLINE_RETAIL_DIR = ONLINE_RETAIL_DIR / "external"
+INTERIM_NOTEBOOK_ONLINE_RETAIL_DIR = ONLINE_RETAIL_DIR / "interim/notebook_related"
+INTERIM_CLI_ONLINE_RETAIL_DIR = ONLINE_RETAIL_DIR / "interim/cli_related"
 # MODELING DIRECTORIES
 MODELS_DIR = PROJECT_ROOT / "models"            # Lưu model đã train
+MODELS_OLIST_DIR = MODELS_DIR / "Olist"              # Lưu model cuối cùng đã chọn
+MODELS_ONLINE_RETAIL_DIR = MODELS_DIR / "Online_Retail"  # Lưu model cuối cùng đã chọn
 CHECKPOINTS_DIR = MODELS_DIR / "checkpoints"    # Lưu checkpoint trong quá trình train
 # thư mục mã nguồn 
 SRC_DIR = PROJECT_ROOT / "src"
@@ -34,8 +45,9 @@ TESTS_DIR = PROJECT_ROOT / "tests"            # Code test, có thể chia thành
 # TẠO TẤT CẢ THƯ MỤC NẾU CHƯA TỒN TẠI
 
 directories_to_create = [
-    RAW_DIR, INTERIM_NOTEBOOK_DIR, INTERIM_CLI_DIR, PROCESSED_DIR, FEATURES_DIR, EXTERNAL_DIR,
-    MODELS_DIR, CHECKPOINTS_DIR,
+    RAW_DIR, OLIST_DIR, INTERIM_NOTEBOOK_DIR, INTERIM_CLI_DIR, PROCESSED_DIR, FEATURES_DIR, EXTERNAL_DIR,
+    ONLINE_RETAIL_RAW_DIR, PROCESSED_ONLINE_RETAIL_DIR, FEATURES_ONLINE_RETAIL_DIR, EXTERNAL_ONLINE_RETAIL_DIR, INTERIM_NOTEBOOK_ONLINE_RETAIL_DIR, INTERIM_CLI_ONLINE_RETAIL_DIR,
+    MODELS_DIR, MODELS_OLIST_DIR, MODELS_ONLINE_RETAIL_DIR, CHECKPOINTS_DIR,
     FEATURES_SRC_DIR, MODELS_SRC_DIR, VISUALIZATION_SRC_DIR,
     REPORTS_DIR, FIGURES_DIR, LOGS_DIR, METRICS_DIR,
     NOTEBOOKS_DIR, INTERIM_NOTEBOOK_DIR,
