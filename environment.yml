@@ -27,7 +27,7 @@ dependencies:
     - pika
     - docker
     - imbalanced-learn
-    - xgboost
+    - xgboost ==2.1.4
     - lightgbm
     - tensorflow
     - google-genai
