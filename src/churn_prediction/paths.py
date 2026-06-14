@@ -25,6 +25,8 @@ MODELS_DIR = PROJECT_ROOT / "models"            # Lưu model đã train
 MODELS_OLIST_DIR = MODELS_DIR / "Olist"              # Lưu model cuối cùng đã chọn
 MODELS_ONLINE_RETAIL_DIR = MODELS_DIR / "Online_Retail"  # Lưu model cuối cùng đã chọn
 CHECKPOINTS_DIR = MODELS_DIR / "checkpoints"    # Lưu checkpoint trong quá trình train
+SENTIMENT_MODEL_PATH = MODELS_OLIST_DIR / "best_experience_model.pkl"  # Lưu model sentiment analysis
+CHURN_MODEL_PATH = MODELS_ONLINE_RETAIL_DIR / "churn_model.pkl"          # Lưu model churn prediction
 # thư mục mã nguồn 
 SRC_DIR = PROJECT_ROOT / "src"
 FEATURES_SRC_DIR = SRC_DIR / "features"  # Code tạo features
@@ -42,6 +44,7 @@ ENV_DIR = PROJECT_ROOT / "env"                  # Môi trường ảo, requireme
 NOTEBOOKS_DIR = PROJECT_ROOT / "notebook"       # Tất cả notebook
 # TESTS
 TESTS_DIR = PROJECT_ROOT / "tests"            # Code test, có thể chia thành unit tests và integration tests
+
 # TẠO TẤT CẢ THƯ MỤC NẾU CHƯA TỒN TẠI
 
 directories_to_create = [
@@ -58,7 +61,6 @@ directories_to_create = [
 for dir_path in directories_to_create:
     dir_path.mkdir(parents=True, exist_ok=True)
 
-print("All directories created successfully!")
 
 # TIỆN ÍCH CHO VIỆC LƯU/ĐỌC DỮ LIỆU
 def get_latest_file(directory: Path, pattern: str = "*.parquet"):

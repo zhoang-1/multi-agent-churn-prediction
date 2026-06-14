@@ -10,6 +10,7 @@ dependencies:
   - matplotlib
   - seaborn
   - jupyter
+  - shap
   - pip
   - pip:
     - crewai
@@ -29,3 +30,6 @@ dependencies:
     - xgboost
     - lightgbm
     - tensorflow
+    - google-genai
+    - python-dotenv
+    - joblib
