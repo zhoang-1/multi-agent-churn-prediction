@@ -29,7 +29,6 @@ SENTIMENT_MODEL_PATH = MODELS_OLIST_DIR / "best_experience_model.pkl"  # Lưu mo
 CHURN_MODEL_PATH = MODELS_ONLINE_RETAIL_DIR / "churn_model.pkl"          # Lưu model churn prediction
 # thư mục mã nguồn 
 SRC_DIR = PROJECT_ROOT / "src"
-FEATURES_SRC_DIR = SRC_DIR / "features"  # Code tạo features
 MODELS_SRC_DIR  = SRC_DIR  / 'models'    # Code định nghĩa model
 VISUALIZATION_SRC_DIR = SRC_DIR / "visualization"  # Code vẽ biểu đồ
 # reports
@@ -39,7 +38,7 @@ LOGS_DIR = REPORTS_DIR / "logs"                 # Lưu log files
 METRICS_DIR = REPORTS_DIR / "metrics"           # Lưu kết quả đánh giá model
 # CONFIG & ENVIRONMENT
 CONFIG_DIR = PROJECT_ROOT / "configs"            # File cấu hình (yaml, json)
-ENV_DIR = PROJECT_ROOT / "env"                  # Môi trường ảo, requirements.txt
+
 # NOTEBOOKS
 NOTEBOOKS_DIR = PROJECT_ROOT / "notebook"       # Tất cả notebook
 # TESTS
@@ -51,10 +50,10 @@ directories_to_create = [
     RAW_DIR, OLIST_DIR, INTERIM_NOTEBOOK_DIR, INTERIM_CLI_DIR, PROCESSED_DIR, FEATURES_DIR, EXTERNAL_DIR,
     ONLINE_RETAIL_RAW_DIR, PROCESSED_ONLINE_RETAIL_DIR, FEATURES_ONLINE_RETAIL_DIR, EXTERNAL_ONLINE_RETAIL_DIR, INTERIM_NOTEBOOK_ONLINE_RETAIL_DIR, INTERIM_CLI_ONLINE_RETAIL_DIR,
     MODELS_DIR, MODELS_OLIST_DIR, MODELS_ONLINE_RETAIL_DIR, CHECKPOINTS_DIR,
-    FEATURES_SRC_DIR, MODELS_SRC_DIR, VISUALIZATION_SRC_DIR,
+    MODELS_SRC_DIR, VISUALIZATION_SRC_DIR,
     REPORTS_DIR, FIGURES_DIR, LOGS_DIR, METRICS_DIR,
     NOTEBOOKS_DIR, INTERIM_NOTEBOOK_DIR,
-    CONFIG_DIR, ENV_DIR,
+    CONFIG_DIR,
     TESTS_DIR
 ]
 

@@ -1,0 +1,7 @@
+{
+  "risk_thresholds": {
+    "high": 0.7,
+    "medium": 0.4
+  },
+  "model_path": "churn_prediction/churn_model.joblib"
+}

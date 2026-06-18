@@ -1,1 +1,1 @@
-from churn_prediction.multi_agents.run_pipeline import run_pipeline
+from churn_prediction.multi_agents.pipeline.run_pipeline import run_pipeline

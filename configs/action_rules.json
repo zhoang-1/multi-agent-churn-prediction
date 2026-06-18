@@ -1,0 +1,39 @@
+{
+  "negative_high": [
+    "Cải thiện chất lượng sản phẩm/dịch vụ ngay",
+    "Chiến dịch win-back với ưu đãi đặc biệt",
+    "Khảo sát nguyên nhân rời bỏ"
+  ],
+  "negative_medium": [
+    "Gửi email xin lỗi + voucher",
+    "Cải thiện quy trình giao hàng"
+  ],
+  "negative_low": [
+    "Theo dõi xu hướng sentiment",
+    "Cải thiện mô tả sản phẩm"
+  ],
+  "neutral_high": [
+    "Chương trình loyalty khẩn cấp",
+    "Cá nhân hóa trải nghiệm mua sắm"
+  ],
+  "neutral_medium": [
+    "Newsletter sản phẩm mới",
+    "Ưu đãi thành viên"
+  ],
+  "neutral_low": [
+    "Tăng engagement qua content"
+  ],
+  "positive_high": [
+    "VIP program",
+    "Early access sản phẩm mới",
+    "Chương trình referral"
+  ],
+  "positive_medium": [
+    "Tích điểm đổi quà",
+    "Upsell sản phẩm liên quan"
+  ],
+  "positive_low": [
+    "Duy trì trải nghiệm tốt",
+    "Khuyến khích review"
+  ]
+}
