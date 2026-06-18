@@ -5,8 +5,23 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import json
 import pandas as pd
-from graph import sentiment_pipeline, churn_pipeline, report_pipeline
+from graph import customer_data_pipeline,sentiment_pipeline, churn_pipeline, report_pipeline
 
+def run_customer_data_pipeline(order_input: dict) -> dict:
+    """
+    Chạy Agent 0 để xử lý dữ liệu đầu vào (nếu cần).
+    Trả về customer_profile và sentiment_result để đưa vào 2 pipeline chính.
+    """
+    state = customer_data_pipeline.invoke({
+        "order_input": order_input,
+        "customer_profile": None,
+        "sentiment_result": None,
+        "churn_result": None,
+        "report": None,
+        "action": None,
+        "error": None,
+    })
+    return state
 def run_sentiment_batch(reviews_df: pd.DataFrame,
                         text_col: str = "review_comment_message",
                         id_col: str   = "customer_id") -> dict:
