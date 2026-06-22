@@ -1,24 +1,19 @@
 # state.py — Shared state cho 2 pipeline độc lập
-from typing import TypedDict, Optional, List
+from typing import TypedDict, Optional, List, Dict, Any
 
 class CustomerDataState(TypedDict):
-    order_input: dict
-
-    customer_profile: dict
-
-    sentiment_result: dict
-    churn_result: dict
-
-    report: str
-    action: dict
-
-    error: str | None
+    """State cho Data Agent - tiền xử lý tìm kiếm và tạo mới"""
+    order_input: Dict[str, Any]
+    customer_profile: Optional[Dict[str, Any]]
+    error: Optional[str]
 
 class SentimentState(TypedDict):
     """State cho Agent 1 — chạy trên Olist dataset"""
     # Input
     customer_id  : str
     review_text  : str
+    customer_profile: Optional[dict]
+    features: Optional[dict]
 
     # Output Agent 1
     sentiment_result: Optional[dict]  # {label, confidence, proba}
@@ -29,6 +24,7 @@ class ChurnState(TypedDict):
     """State cho Agent 2 — chạy trên Online Retail II dataset"""
     # Input
     customer_id: str
+    customer_profile: Optional[dict]
     features   : dict                 # numeric features từ feature_engineering
 
     # Output Agent 2

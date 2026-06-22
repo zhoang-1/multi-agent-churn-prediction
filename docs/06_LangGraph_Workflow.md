@@ -1,37 +1,52 @@
 # LangGraph Workflow
 
 ```
-START
+                        START
 
-↓
+                           ↓
 
-Data Agent
+                    CustomerDataAgent
+                           │
+          ┌────────────────┴────────────────┐
+          │                                 │
+          ▼                                 ▼
+     _agentic_lookup()              CustomerLookupTool
+          │                                 │
+          ▼                                 ▼
+        Gemini                        CustomerService
+          │                                 │
+          └──────────────┬──────────────────┘
+                         ▼
+                 HarmonizationTool
+                         │
+                         ▼
+                Customer Context
+                         │
+          ┌──────────────┴──────────────────┐
+          ▼                                 ▼
+ ChurnFeatureBuilder            SentimentFeatureBuilder
 
-↓
+        │                                   │
 
-──────────────
+        ▼                                   ▼
 
-│            │
+    Sentiment                             Churn
 
-▼            ▼
+        │                                   │
 
-Sentiment   Churn
+        ─────────────────────────────────────
 
-│            │
+                         ↓
 
-──────────────
+                        Report
 
-↓
+                         ↓
 
-Report
+                        Action
 
-↓
+                         ↓
 
-Action
-
-↓
-
-END
+                        END
 ```
 
 ## State

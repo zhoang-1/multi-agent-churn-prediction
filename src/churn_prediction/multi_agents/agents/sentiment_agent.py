@@ -4,15 +4,6 @@ import numpy as np
 import logging
 from pathlib import Path
 from typing import Dict, Optional, Union, Any
-from builders.sentiment_feature_builder import (
-    SentimentFeatureBuilder
-)
-
-builder = SentimentFeatureBuilder()
-
-features = builder.build(
-    customer_profile
-)
 logger = logging.getLogger(__name__)
 
 class SentimentAgent:
@@ -71,12 +62,12 @@ class SentimentAgent:
             if not isinstance(idx, int) or idx < 0:
                 raise ValueError(f"Chỉ số class phải là số nguyên không âm: {idx}")
 
-    def analyze(self, review_text: str) -> Dict[str, Any]:
+    def analyze(self, features: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Phân tích cảm xúc cho một review.
+        Phân tích cảm xúc dựa trên đặc trưng số học.
 
         Args:
-            review_text (str): Nội dung đánh giá.
+            features (dict): Dict chứa các đặc trưng số từ SentimentFeatureBuilder.
 
         Returns:
             dict: Kết quả phân tích gồm:
@@ -85,20 +76,34 @@ class SentimentAgent:
                 - proba (dict): Xác suất cho từng nhãn.
                 - error (str | None): Thông báo lỗi nếu có.
         """
-        # Kiểm tra review rỗng
-        if not review_text or not str(review_text).strip():
-            logger.warning("Review rỗng")
+        if not features:
+            logger.warning("Features rỗng")
             return {
                 "label": "unknown",
                 "confidence": 0.0,
                 "proba": {},
-                "error": "Empty review",
+                "error": "Empty features",
             }
 
         try:
-            # Chuyển thành list để predict
-            review_text = str(review_text).strip()
-            proba = self.pipeline.predict_proba([review_text])[0]
+            import pandas as pd
+            # Chuyển features sang DataFrame
+            X = pd.DataFrame([features])
+
+            # Chỉ giữ các cột số (numeric) để tránh lỗi
+            numeric_cols = X.select_dtypes(include=[np.number]).columns
+            if len(numeric_cols) == 0:
+                error_msg = "Không có đặc trưng số nào"
+                logger.error(error_msg)
+                return {
+                    "label": "unknown",
+                    "confidence": 0.0,
+                    "proba": {},
+                    "error": error_msg,
+                }
+
+            X = X[numeric_cols]
+            proba = self.pipeline.predict_proba(X)[0]
             label_idx = int(np.argmax(proba))
             confidence = float(proba[label_idx])
 
@@ -110,7 +115,7 @@ class SentimentAgent:
                 for i, p in enumerate(proba)
             }
 
-            logger.debug(f"Review: '{review_text[:50]}...' -> label={label}, conf={confidence:.4f}")
+            logger.debug(f"Phân tích hoàn tất: label={label}, conf={confidence:.4f}")
 
             return {
                 "label": label,

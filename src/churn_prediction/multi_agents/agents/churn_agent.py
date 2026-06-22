@@ -5,14 +5,6 @@ import numpy as np
 import logging
 from pathlib import Path
 from typing import Dict, Any, Optional, Union
-from builders.churn_feature_builder import (
-    ChurnFeatureBuilder
-)
-
-builder = ChurnFeatureBuilder()
-features = builder.build(
-    customer_profile
-)
 logger = logging.getLogger(__name__)
 
 class ChurnAgent:
