@@ -24,15 +24,22 @@ def run_prediction(order_input: dict) -> dict:
         "action_plan": None,
         "error": None,
     })
+
+
     state = sentiment_pipeline.invoke(state)
+    
+    #print(type(state))
 
-    if state.get("error"):
-        return state
-    state = churn_pipeline.invoke(state)
+    #for k, v in state.items():
+    #    print(k, type(v))
 
-    if state.get("error"):
-        return state
-    state = report_pipeline.invoke(state)
+    # if state.get("error"):
+    #     return state
+    # state = churn_pipeline.invoke(state)
+
+    # if state.get("error"):
+    #     return state
+    # state = report_pipeline.invoke(state)
 
     return state
 

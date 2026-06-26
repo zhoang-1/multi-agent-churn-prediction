@@ -2,7 +2,7 @@
 import json
 import re
 from pathlib import Path
-from core.llm_client import call_llm
+from ..core.llm_client import call_llm
 
 class ActionAgent:
     def __init__(self, config_dir: str = "config", prompts_dir: str = "prompts"):
@@ -35,7 +35,7 @@ class ActionAgent:
             }
 
         # ── 2. Đọc SYSTEM_PROMPT từ file .md ──
-        prompt_file = Path(__file__).parent.parent / prompts_dir / "agent4_action_system.md"
+        prompt_file = Path(__file__).parent.parent / prompts_dir / "action.md"
         if prompt_file.exists():
             content = prompt_file.read_text(encoding="utf-8")
             # Trích xuất phần nội dung giữa cặp ba dấu backticks (``` ... ```)
@@ -60,14 +60,14 @@ hãy đề xuất kế hoạch hành động cụ thể, thực tế bằng ti�
 Chia thành: Hành động ngay (0-7 ngày), Ngắn hạn (1 tháng), Dài hạn (3 tháng)."""
 
     def recommend(self,
-                  sentiment_summary: dict,
-                  churn_summary: dict,
+                  sentiment_result: dict,
+                  churn_result: dict,
                   report: str) -> dict:
         """
         Tạo kế hoạch hành động dựa trên tổng hợp sentiment + churn.
         """
-        dominant_sentiment = sentiment_summary.get("dominant_label", "neutral")
-        dominant_risk      = churn_summary.get("dominant_risk", "medium")
+        dominant_sentiment = sentiment_result.get("dominant_label", "neutral")
+        dominant_risk      = churn_result.get("dominant_risk", "medium")
 
         key = (dominant_sentiment, dominant_risk)
         rule_actions = self.RULE_ACTIONS.get(key, ["Phân tích thêm dữ liệu"])

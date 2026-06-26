@@ -2,7 +2,7 @@
 import logging
 from typing import Optional, Dict, Any, List
 from datetime import datetime
-from database.connection import customers, orders
+from ...database.connection import customers, orders
 
 logger = logging.getLogger(__name__)
 
@@ -73,9 +73,9 @@ class CustomerService:
             "last_order_date": None
         }
         # Lưu vào DB
-        customers.insert_one(new_customer)
+        result = customers.insert_one(new_customer)
         logger.info(f"Tạo mới khách hàng: {customer_id}")
         # Trả về profile (không có orders)
-        new_customer["_id"] = str(new_customer["_id"])
+        new_customer["_id"] = str(result.inserted_id)
         new_customer["orders"] = []
         return new_customer

@@ -14,8 +14,8 @@ def node_action_only(state: ReportState) -> ReportState:
     """
     try:
         action_plan = action_agent.recommend(
-            sentiment_summary=state.get("sentiment_summary", {}),
-            churn_summary=state.get("churn_summary", {}),
+            sentiment_result=state.get("sentiment_result", {}),
+            churn_result=state.get("churn_result", {}),
             report=state.get("report", "")  # có thể để trống
         )
         return {**state, "action_plan": action_plan}

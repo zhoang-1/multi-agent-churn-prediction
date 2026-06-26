@@ -3,23 +3,62 @@ import pandas as pd
 from datetime import datetime
 
 class SentimentFeatureBuilder:
+    """
+    Builds exactly 30 features for customer experience modeling.
+    Features match the selection in modeling_pipeline.ipynb.
+    """
+
+    # Fixed list of 30 feature names
+    FEATURE_NAMES = [
+        'recency', 'frequency', 'monetary', 'rfm_segment',
+        'avg_delivery_time', 'std_delivery_time', 'max_delivery_time',
+        'avg_estimated_delivery', 'avg_freight_per_order',
+        'num_comments', 'num_titles', 'avg_days_to_answer',
+        'avg_items_per_order', 'night_purchase_ratio', 'total_orders',
+        'avg_gap', 'max_gap', 'avg_installments', 'favorite_payment_type',
+        'credit_card_ratio', 'boleto_ratio', 'spending_trend', 'order_trend',
+        'recent_vs_old_ratio', 'avg_order_trend', 'total_comments_msg',
+        'total_comments_title', 'unique_sellers', 'customer_state',
+        'num_categories_bought'
+    ]
 
     def build(self, customer_profile):
+        # 1. Initialize all features with default values
+        features = {name: 0 for name in self.FEATURE_NAMES}
+        # string features need a different default
+        features['rfm_segment'] = 'unknown'
+        features['favorite_payment_type'] = 'unknown'
+        features['customer_state'] = 'unknown'
+
         orders = customer_profile.get("orders", [])
-        
         if not orders:
-            return self._empty_features()
+            return features
 
         df = pd.DataFrame(orders)
-        
-        # Ensure timestamp types if needed
+
+        # 2. Đảm bảo các cột dấu thời gian tồn tại
         if 'order_purchase_timestamp' in df.columns:
             df['order_purchase_timestamp'] = pd.to_datetime(df['order_purchase_timestamp'])
         else:
-            # Fallback if no timestamp
             df['order_purchase_timestamp'] = pd.Timestamp.now()
-            
-        features = {}
+
+        if 'order_delivered_customer_date' in df.columns:
+            df['order_delivered_customer_date'] = pd.to_datetime(df['order_delivered_customer_date'])
+        if 'order_estimated_delivery_date' in df.columns:
+            df['order_estimated_delivery_date'] = pd.to_datetime(df['order_estimated_delivery_date'])
+
+        # 3. Tính toán các cột hỗ trợ nếu thiếu dữ liệu.
+        if 'delivery_time_days' not in df.columns and 'order_delivered_customer_date' in df.columns:
+            df['delivery_time_days'] = (
+                df['order_delivered_customer_date'] - df['order_purchase_timestamp']
+            ).dt.days
+
+        if 'estimated_delivery_days' not in df.columns and 'order_estimated_delivery_date' in df.columns:
+            df['estimated_delivery_days'] = (
+                df['order_estimated_delivery_date'] - df['order_purchase_timestamp']
+            ).dt.days
+
+        # 4. Update features from each sub‑builder
         features.update(self._build_rfm(df))
         features.update(self._build_delivery(df))
         features.update(self._build_payment(df))
@@ -27,178 +66,251 @@ class SentimentFeatureBuilder:
         features.update(self._build_trend(df))
         features.update(self._build_behavior(df))
 
-        # Gán unknown/0 cho các feature NaN
-        for k, v in features.items():
-            if pd.isna(v):
-                features[k] = 0
+        # 5. Bước dọn dẹp thay thế bất kỳ giá trị NaN hoặc khóa bị thiếu nào.
+        for key in self.FEATURE_NAMES:
+            if key not in features or pd.isna(features[key]):
+                if key in ['rfm_segment', 'favorite_payment_type', 'customer_state']:
+                    features[key] = 'unknown'
+                else:
+                    features[key] = 0
 
         return features
 
-    def _empty_features(self):
-        return {
-            "recency": 0, "frequency": 0, "monetary": 0,
-            "avg_delivery_time": 0, "std_delivery_time": 0, "max_delivery_time": 0,
-            "avg_estimated_delivery": 0, "avg_delivery_delay": 0, "late_delivery_ratio": 0,
-            "avg_freight_per_order": 0,
-            "avg_installments": 0, "credit_card_ratio": 0, "boleto_ratio": 0,
-            "avg_review_score": 0, "std_review_score": 0, "min_review_score": 0,
-            "num_bad_reviews": 0, "low_review_ratio": 0, "avg_days_to_answer": 0,
-            "spending_trend": 0, "order_trend": 0, "recent_vs_old_ratio": 0,
-            "avg_items_per_order": 0, "weekend_purchase_ratio": 0, "night_purchase_ratio": 0
-        }
+    # ------------------------------------------------------------------
+    # Các thành phần con – mỗi thành phần trả về chính xác các khóa cho nhóm của nó.
+    # ------------------------------------------------------------------
 
     def _build_rfm(self, df):
-        if 'order_purchase_timestamp' not in df.columns or 'total_payment' not in df.columns:
-            # Fallback based on old 'order_value' if present
-            order_val_col = 'total_payment' if 'total_payment' in df.columns else 'order_value'
-            val = df[order_val_col].sum() if order_val_col in df.columns else 0
-            
-            if 'order_date' in df.columns:
-                last_order_date = pd.to_datetime(df["order_date"]).max()
-                recency = (pd.Timestamp.now() - last_order_date).days
-            elif 'order_purchase_timestamp' in df.columns:
-                last_order_date = df["order_purchase_timestamp"].max()
-                recency = (pd.Timestamp.now() - last_order_date).days
-            else:
-                recency = 0
-                
-            return {
-                "recency": recency,
-                "frequency": len(df),
-                "monetary": val
-            }
-
-        last_order_date = df["order_purchase_timestamp"].max()
-        recency = (pd.Timestamp.now() - last_order_date).days
+        last_order = df['order_purchase_timestamp'].max()
+        recency = (pd.Timestamp.now() - last_order).days
         frequency = len(df)
-        monetary = df["total_payment"].sum()
+        monetary = df.get('total_payment', df.get('order_value', 0)).sum()
+
+        # Segment logic (same as in feature_engineering.ipynb)
+        recency_score = 4 if recency <= 30 else (3 if recency <= 90 else (2 if recency <= 180 else 1))
+        frequency_score = 4 if frequency >= 5 else (3 if frequency >= 3 else (2 if frequency >= 2 else 1))
+        monetary_score = 4 if monetary >= 500 else (3 if monetary >= 200 else (2 if monetary >= 100 else 1))
+
+        if recency_score >= 3 and frequency_score >= 3 and monetary_score >= 3:
+            segment = 'champion'
+        elif recency_score >= 3 and frequency_score >= 2:
+            segment = 'loyal'
+        elif recency_score <= 2 and frequency_score <= 2 and monetary_score <= 2:
+            segment = 'at_risk'
+        elif recency_score <= 1:
+            segment = 'churned'
+        else:
+            segment = 'promising'
 
         return {
             "recency": recency,
             "frequency": frequency,
-            "monetary": monetary
+            "monetary": monetary,
+            "rfm_segment": segment
         }
 
     def _build_delivery(self, df):
-        features = {}
-        
+        # Delivery times
         if 'delivery_time_days' in df.columns:
-            features['avg_delivery_time'] = df['delivery_time_days'].mean()
-            features['std_delivery_time'] = df['delivery_time_days'].std()
-            features['max_delivery_time'] = df['delivery_time_days'].max()
-        elif 'order_delivered_customer_date' in df.columns and 'order_purchase_timestamp' in df.columns:
-            delivery_time = (pd.to_datetime(df['order_delivered_customer_date']) - df['order_purchase_timestamp']).dt.days
-            features['avg_delivery_time'] = delivery_time.mean()
-            features['std_delivery_time'] = delivery_time.std()
-            features['max_delivery_time'] = delivery_time.max()
+            avg_del = df['delivery_time_days'].mean()
+            std_del = df['delivery_time_days'].std()
+            max_del = df['delivery_time_days'].max()
         else:
-            features['avg_delivery_time'] = 0
-            features['std_delivery_time'] = 0
-            features['max_delivery_time'] = 0
+            avg_del = std_del = max_del = 0
 
-        if 'delivery_delay' in df.columns:
-            features['avg_delivery_delay'] = df['delivery_delay'].mean()
-            features['late_delivery_ratio'] = (df['delivery_delay'] > 0).mean()
-        elif 'order_estimated_delivery_date' in df.columns and 'order_delivered_customer_date' in df.columns:
-            est_time = (pd.to_datetime(df['order_estimated_delivery_date']) - df['order_purchase_timestamp']).dt.days
-            delivery_time = (pd.to_datetime(df['order_delivered_customer_date']) - df['order_purchase_timestamp']).dt.days
-            delay = delivery_time - est_time
-            features['avg_delivery_delay'] = delay.mean()
-            features['late_delivery_ratio'] = (delay > 0).mean()
+        # Estimated delivery
+        if 'estimated_delivery_days' in df.columns:
+            avg_est = df['estimated_delivery_days'].mean()
         else:
-            features['avg_delivery_delay'] = 0
-            features['late_delivery_ratio'] = 0
+            avg_est = 0
 
+        # Freight
         if 'avg_freight' in df.columns:
-            features['avg_freight_per_order'] = df['avg_freight'].mean()
+            avg_freight = df['avg_freight'].mean()
+        elif 'total_freight' in df.columns and 'num_products' in df.columns:
+            avg_freight = (df['total_freight'] / df['num_products']).mean()
         else:
-            features['avg_freight_per_order'] = 0
-            
-        return features
+            avg_freight = 0
+
+        return {
+            "avg_delivery_time": avg_del,
+            "std_delivery_time": std_del,
+            "max_delivery_time": max_del,
+            "avg_estimated_delivery": avg_est,
+            "avg_freight_per_order": avg_freight
+        }
 
     def _build_payment(self, df):
-        features = {}
+        # Installments
         if 'max_installments' in df.columns:
-            features['avg_installments'] = df['max_installments'].mean()
+            avg_install = df['max_installments'].mean()
         elif 'payment_installments' in df.columns:
-            features['avg_installments'] = df['payment_installments'].mean()
+            avg_install = df['payment_installments'].mean()
         else:
-            features['avg_installments'] = 1
+            avg_install = 1
 
+        # Payment type
+        payment_col = None
         if 'main_payment_type' in df.columns:
-            features['credit_card_ratio'] = (df['main_payment_type'] == 'credit_card').mean()
-            features['boleto_ratio'] = (df['main_payment_type'] == 'boleto').mean()
+            payment_col = 'main_payment_type'
         elif 'payment_type' in df.columns:
-            features['credit_card_ratio'] = (df['payment_type'] == 'credit_card').mean()
-            features['boleto_ratio'] = (df['payment_type'] == 'boleto').mean()
+            payment_col = 'payment_type'
+
+        if payment_col:
+            credit_ratio = (df[payment_col] == 'credit_card').mean()
+            boleto_ratio = (df[payment_col] == 'boleto').mean()
+            mode_val = df[payment_col].mode()
+            favorite = mode_val[0] if not mode_val.empty else 'unknown'
         else:
-            features['credit_card_ratio'] = 0
-            features['boleto_ratio'] = 0
-            
-        return features
+            credit_ratio = 0
+            boleto_ratio = 0
+            favorite = 'unknown'
+
+        return {
+            "avg_installments": avg_install,
+            "credit_card_ratio": credit_ratio,
+            "boleto_ratio": boleto_ratio,
+            "favorite_payment_type": favorite
+        }
 
     def _build_review(self, df):
-        features = {}
-        if 'review_score' in df.columns:
-            features['avg_review_score'] = df['review_score'].mean()
-            features['std_review_score'] = df['review_score'].std()
-            features['min_review_score'] = df['review_score'].min()
-            features['low_review_ratio'] = (df['review_score'] <= 2).mean()
-            features['num_bad_reviews'] = (df['review_score'] <= 2).sum()
-        else:
-            features['avg_review_score'] = 0
-            features['std_review_score'] = 0
-            features['min_review_score'] = 0
-            features['low_review_ratio'] = 0
-            features['num_bad_reviews'] = 0
-            
+        # Days to answer
         if 'days_to_answer' in df.columns:
-            features['avg_days_to_answer'] = df['days_to_answer'].mean()
+            avg_days = df['days_to_answer'].mean()
         else:
-            features['avg_days_to_answer'] = 0
+            avg_days = 0
 
-        return features
+        # Comment counts and totals
+        if 'num_comment_messages' in df.columns:
+            num_comments = df['num_comment_messages'].notna().sum()
+            total_msg = df['num_comment_messages'].sum()
+        else:
+            num_comments = 0
+            total_msg = 0
+
+        if 'num_comment_titles' in df.columns:
+            num_titles = df['num_comment_titles'].notna().sum()
+            total_title = df['num_comment_titles'].sum()
+        else:
+            num_titles = 0
+            total_title = 0
+
+        return {
+            "num_comments": num_comments,
+            "num_titles": num_titles,
+            "avg_days_to_answer": avg_days,
+            "total_comments_msg": total_msg,
+            "total_comments_title": total_title
+        }
 
     def _build_trend(self, df):
-        features = {}
-        if len(df) < 3:
-            return {"spending_trend": 0, "order_trend": 0, "recent_vs_old_ratio": 0}
-            
-        # Sắp xếp lại theo thời gian
-        df_sorted = df.sort_values('order_purchase_timestamp') if 'order_purchase_timestamp' in df.columns else df
-        
-        half = len(df_sorted) // 2
+        # Sắp xếp theo thời gian
+        if 'order_purchase_timestamp' in df.columns:
+            df_sorted = df.sort_values('order_purchase_timestamp')
+        else:
+            df_sorted = df
+
+        n = len(df_sorted)
+        if n < 3:
+            return {
+                "spending_trend": 0,
+                "order_trend": 0,
+                "recent_vs_old_ratio": 0,
+                "avg_order_trend": 0
+            }
+
+        half = n // 2
         old = df_sorted.head(half)
         recent = df_sorted.tail(half)
-        
+
         payment_col = 'total_payment' if 'total_payment' in df_sorted.columns else ('order_value' if 'order_value' in df_sorted.columns else None)
-        
+
         if payment_col:
             old_spend = old[payment_col].mean()
             recent_spend = recent[payment_col].mean()
-            features['spending_trend'] = (recent_spend - old_spend) / (old_spend + 1)
+            spending_trend = (recent_spend - old_spend) / (old_spend + 1)
+            old_avg = old[payment_col].sum() / len(old)
+            recent_avg = recent[payment_col].sum() / len(recent)
+            avg_order_trend = (recent_avg - old_avg) / (old_avg + 1)
         else:
-            features['spending_trend'] = 0
-            
-        features['order_trend'] = (len(recent) - len(old)) / (len(old) + 1)
-        features['recent_vs_old_ratio'] = len(recent) / (len(old) + 1)
-        
-        return features
+            spending_trend = 0
+            avg_order_trend = 0
+
+        order_trend = (len(recent) - len(old)) / (len(old) + 1)
+        recent_vs_old_ratio = len(recent) / (len(old) + 1)
+
+        return {
+            "spending_trend": spending_trend,
+            "order_trend": order_trend,
+            "recent_vs_old_ratio": recent_vs_old_ratio,
+            "avg_order_trend": avg_order_trend
+        }
 
     def _build_behavior(self, df):
-        features = {}
+        # Items per order
         if 'num_products' in df.columns:
-            features['avg_items_per_order'] = df['num_products'].mean()
+            avg_items = df['num_products'].mean()
         else:
-            features['avg_items_per_order'] = 0
-            
+            avg_items = 0
+
+        # Total orders
+        total_orders = len(df)
+
+        # Night purchase ratio
         if 'order_purchase_timestamp' in df.columns:
             purchase_hour = df['order_purchase_timestamp'].dt.hour
-            purchase_weekday = df['order_purchase_timestamp'].dt.dayofweek
-            features['weekend_purchase_ratio'] = purchase_weekday.isin([5,6]).mean()
-            features['night_purchase_ratio'] = purchase_hour.isin(range(20,24)).mean()
+            night_ratio = purchase_hour.isin(range(20, 24)).mean()
         else:
-            features['weekend_purchase_ratio'] = 0
-            features['night_purchase_ratio'] = 0
-            
-        return features
+            night_ratio = 0
+
+        # Gaps between orders
+        if 'order_purchase_timestamp' in df.columns and len(df) >= 2:
+            sorted_dates = df['order_purchase_timestamp'].sort_values()
+            gaps = sorted_dates.diff().dt.days.dropna()
+            avg_gap = gaps.mean() if len(gaps) > 0 else 0
+            max_gap = gaps.max() if len(gaps) > 0 else 0
+        else:
+            avg_gap = 0
+            max_gap = 0
+
+        # Unique sellers
+        if 'seller_id' in df.columns:
+            unique_sellers = df['seller_id'].nunique()
+        elif 'seller_ids' in df.columns:
+            all_sellers = set()
+            for ids in df['seller_ids']:
+                if isinstance(ids, list):
+                    all_sellers.update(ids)
+            unique_sellers = len(all_sellers)
+        else:
+            unique_sellers = 0
+
+        # Customer state
+        if 'customer_state' in df.columns:
+            mode_state = df['customer_state'].mode()
+            customer_state = mode_state[0] if not mode_state.empty else 'unknown'
+        else:
+            customer_state = 'unknown'
+
+        # Number of product categories
+        if 'product_category' in df.columns:
+            num_cats = df['product_category'].nunique()
+        elif 'product_categories' in df.columns:
+            all_cats = set()
+            for cats in df['product_categories']:
+                if isinstance(cats, list):
+                    all_cats.update(cats)
+            num_cats = len(all_cats)
+        else:
+            num_cats = 0
+
+        return {
+            "avg_items_per_order": avg_items,
+            "night_purchase_ratio": night_ratio,
+            "total_orders": total_orders,
+            "avg_gap": avg_gap,
+            "max_gap": max_gap,
+            "unique_sellers": unique_sellers,
+            "customer_state": customer_state,
+            "num_categories_bought": num_cats
+        }

@@ -1,5 +1,8 @@
 # core/llm_client.py
-from config.settings import GEMINI_API_KEY, GEMINI_MODEL
+import os
+import sys
+
+from configs.setting import GEMINI_API_KEY, GEMINI_MODEL
 from google import genai
 
 client = genai.Client(api_key=GEMINI_API_KEY)

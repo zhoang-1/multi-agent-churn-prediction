@@ -11,18 +11,25 @@ action_agent = ActionAgent()
 def node_report(state: ReportState) -> ReportState:
     try:
         report = report_agent.generate(
-            sentiment_summary=state.get("sentiment_summary", {}),
-            churn_summary=state.get("churn_summary", {}),
+            sentiment_result=state.get("sentiment_result", {}),
+            churn_result=state.get("churn_result", {}),
         )
-        return {**state, "report": report}
-    except Exception as e:
-        return {**state, "error": f"ReportAgent: {e}"}
 
+        return {
+            **state,
+            "report": report
+        }
+
+    except Exception as e:
+        return {
+            **state,
+            "error": f"ReportAgent: {e}"
+        }
 def node_action(state: ReportState) -> ReportState:
     try:
         action_plan = action_agent.recommend(
-            sentiment_summary=state.get("sentiment_summary", {}),
-            churn_summary=state.get("churn_summary", {}),
+            sentiment_result=state.get("sentiment_result", {}),
+            churn_result=state.get("churn_result", {}),
             report=state.get("report", ""),
         )
         return {**state, "action_plan": action_plan}
@@ -42,7 +49,7 @@ def build_report_pipeline():
         should_continue,
         {"continue": "action", END: END}
     )
-    graph.add_edge("action", END)
+    graph.add_edge("report", END)
     return graph.compile()
 
 # ── Compile sẵn để import ──────────────────────────────────────────────────────

@@ -1,7 +1,6 @@
 from pymongo import MongoClient
 from dotenv import load_dotenv
-from customer_schema import customer_schema
-from order_schema import order_schema
+
 import os
 
 load_dotenv()

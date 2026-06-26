@@ -1,12 +1,12 @@
 # agents/report_agent.py
 import re
 from pathlib import Path
-from core.llm_client import call_llm
+from ..core.llm_client import call_llm
 
 class ReportAgent:
     def __init__(self, prompts_dir: str = "prompts"):
         # Đọc SYSTEM_PROMPT từ file markdown
-        prompt_file = Path(__file__).parent.parent / prompts_dir / "agent3_report_system.md"
+        prompt_file = Path(__file__).parent.parent / prompts_dir / "report_system.md"
         if prompt_file.exists():
             content = prompt_file.read_text(encoding="utf-8")
             # Trích xuất phần nội dung giữa cặp ba dấu backticks (``` ... ```)
@@ -36,14 +36,14 @@ Hãy tổng hợp thành báo cáo ngắn gọn bằng tiếng Việt gồm:
 Giữ dưới 300 từ."""
 
     def generate(self,
-                 sentiment_summary: dict,
-                 churn_summary: dict) -> str:
+                 sentiment_result: dict,
+                 churn_result: dict) -> str:
         user_msg = f"""
 === KẾT QUẢ PHÂN TÍCH CẢM XÚC (Olist) ===
-{self._format_dict(sentiment_summary)}
+{self._format_dict(sentiment_result)}
 
 === KẾT QUẢ DỰ ĐOÁN CHURN (Online Retail II) ===
-{self._format_dict(churn_summary)}
+{self._format_dict(churn_result)}
 
 Hãy viết báo cáo tổng hợp từ 2 nguồn dữ liệu trên.
 """

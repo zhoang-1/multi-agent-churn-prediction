@@ -33,3 +33,4 @@ dependencies:
     - google-genai
     - python-dotenv
     - joblib
+    - faker

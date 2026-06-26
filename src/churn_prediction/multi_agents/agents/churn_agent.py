@@ -5,52 +5,47 @@ import numpy as np
 import logging
 from pathlib import Path
 from typing import Dict, Any, Optional, Union
+from churn_prediction.paths import CHURN_MODEL_PATH
+
 logger = logging.getLogger(__name__)
 
 class ChurnAgent:
     """
     Agent dự đoán rủi ro rời bỏ (churn) của khách hàng.
-
-    Sử dụng model đã train sẵn (joblib) và các ngưỡng xác suất để phân loại mức rủi ro.
-
-    Attributes:
-        pipeline: Pipeline scikit-learn đã load.
-        risk_thresholds (dict): Ngưỡng xác suất cho các mức rủi ro.
     """
 
-    # Ngưỡng mặc định (có thể ghi đè qua constructor)
     DEFAULT_RISK_THRESHOLDS = {"high": 0.7, "medium": 0.4}
 
     def __init__(
         self,
-        model_path: Union[str, Path],
+        model_path: Optional[Union[str, Path]] = None,
         risk_thresholds: Optional[Dict[str, float]] = None,
     ):
-        """
-        Khởi tạo ChurnAgent.
-
-        Args:
-            model_path (str | Path): Đường dẫn đến file model .joblib.
-            risk_thresholds (dict, optional): Tùy chỉnh ngưỡng rủi ro.
-                Ví dụ: {"high": 0.8, "medium": 0.5}
-        """
+        if model_path is None:
+            model_path = CHURN_MODEL_PATH
         self.model_path = Path(model_path)
+
         if not self.model_path.exists():
             raise FileNotFoundError(f"Model không tồn tại: {self.model_path}")
 
         try:
             self.pipeline = joblib.load(self.model_path)
             logger.info(f"Đã load model thành công từ {self.model_path}")
+            # Lưu danh sách tên cột nếu có
+            if hasattr(self.pipeline, 'feature_names_in_'):
+                self.feature_names = list(self.pipeline.feature_names_in_)
+                logger.info(f"Feature names từ model: {self.feature_names}")
+            else:
+                self.feature_names = None
+                logger.warning("Model không có feature_names_in_, sẽ dùng sorted keys")
         except Exception as e:
             logger.error(f"Lỗi khi load model: {e}")
             raise
 
-        # Thiết lập ngưỡng rủi ro
         self.risk_thresholds = risk_thresholds or self.DEFAULT_RISK_THRESHOLDS
         self._validate_thresholds()
 
     def _validate_thresholds(self) -> None:
-        """Kiểm tra tính hợp lệ của các ngưỡng."""
         required = ["high", "medium"]
         for key in required:
             if key not in self.risk_thresholds:
@@ -59,21 +54,7 @@ class ChurnAgent:
             raise ValueError("Ngưỡng phải thỏa mãn: 0 <= medium <= high <= 1")
 
     def predict(self, features: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Dự đoán churn cho một khách hàng dựa trên các đặc trưng.
-
-        Args:
-            features (dict): Dict chứa các đặc trưng số.
-
-        Returns:
-            dict: Kết quả dự đoán gồm:
-                - churn_probability (float): Xác suất rời bỏ.
-                - churn_prediction (int): 0 hoặc 1.
-                - risk_level (str): "high", "medium", hoặc "low".
-                - error (str | None): Thông báo lỗi nếu có.
-        """
         if not features:
-            logger.warning("features rỗng")
             return {
                 "churn_probability": None,
                 "churn_prediction": None,
@@ -82,28 +63,31 @@ class ChurnAgent:
             }
 
         try:
-            # Chuyển features sang DataFrame
-            X = pd.DataFrame([features])
+            # Xác định danh sách cột theo đúng thứ tự
+            if self.feature_names is not None:
+                feature_names = self.feature_names
+            else:
+                # Fallback: sắp xếp theo alphabet
+                feature_names = sorted(features.keys())
+                # Cảnh báo rằng thứ tự có thể không đúng
+                logger.warning("Sử dụng thứ tự sắp xếp alphabet, có thể gây sai nếu model yêu cầu thứ tự cố định")
 
-            # Chỉ giữ các cột số (numeric) để tránh lỗi
-            numeric_cols = X.select_dtypes(include=[np.number]).columns
-            if len(numeric_cols) == 0:
-                error_msg = "Không có đặc trưng số nào"
-                logger.error(error_msg)
-                return {
-                    "churn_probability": None,
-                    "churn_prediction": None,
-                    "risk_level": None,
-                    "error": error_msg,
-                }
+            # Đảm bảo features có tất cả các cột cần thiết
+            # Nếu thiếu, thêm với giá trị 0
+            for col in feature_names:
+                if col not in features:
+                    logger.warning(f"Thiếu feature '{col}', đặt giá trị 0")
+                    features[col] = 0.0
 
-            X = X[numeric_cols]
+            # Tạo DataFrame với các cột đúng thứ tự
+            X = pd.DataFrame([features])[feature_names]
 
-            # Dự đoán xác suất và nhãn
+            # Chuyển sang kiểu số (float)
+            X = X.astype(float)
+
             churn_proba = float(self.pipeline.predict_proba(X)[0][1])
             churn_pred = int(self.pipeline.predict(X)[0])
 
-            # Phân loại rủi ro theo ngưỡng
             high_th = self.risk_thresholds["high"]
             mid_th = self.risk_thresholds["medium"]
 
@@ -137,22 +121,12 @@ class ChurnAgent:
 
     @classmethod
     def from_config(cls, config_path: Union[str, Path]):
-        """
-        Tạo agent từ file cấu hình JSON.
-
-        Args:
-            config_path (str | Path): Đường dẫn file config.
-
-        Returns:
-            ChurnAgent: Instance với cấu hình từ file.
-        """
         import json
-
         config_path = Path(config_path)
         with open(config_path, "r", encoding="utf-8") as f:
             config = json.load(f)
 
-        model_path = config.get("model_path", "churn_prediction/churn_model.joblib")
+        model_path = config.get("model_path", CHURN_MODEL_PATH)
         risk_thresholds = config.get("risk_thresholds", cls.DEFAULT_RISK_THRESHOLDS)
 
         return cls(model_path, risk_thresholds)

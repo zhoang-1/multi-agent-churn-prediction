@@ -1,11 +1,13 @@
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from src.churn_prediction.multi_agents.builders.churn_feature_builder import ChurnFeatureBuilder
-from src.churn_prediction.multi_agents.builders.sentiment_feature_builder import SentimentFeatureBuilder
-from src.churn_prediction.multi_agents.pipeline.run_pipeline import run_prediction
-app = FastAPI(title="Fact API")
+from api.routers.pipeline import router as pipeline_router
 
+app = FastAPI(
+    title="Multi-agent system sentiment analysis and prediction churn in ecommerce",
+    version="1.0",
+    description="Phân tích cảm xúc khách hàng và dự đoán tỷ lệ rời bỏ dựa trên dữ liệu orders"
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,22 +16,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class ChurnRequest(BaseModel):
-    age: int
-    tenure: int
-    monthly_charges: float
-    contract_type: str
 
-@app.post("/predict")
-def predict_churn(request: ChurnRequest):
-    result = run_prediction(request.model_dump())
+# Gắn router
 
-    return result
-
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to Fact API"}
-
-@app.get("/status")
-def status():
-    return {"status": "ok"}
+app.include_router(pipeline_router)
+if __name__ == "__main__":
+    uvicorn.run(
+        "main:app",
+        host="localhost",
+        port=8000,
+        reload=True
+    )

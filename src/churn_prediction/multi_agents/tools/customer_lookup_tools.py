@@ -1,5 +1,5 @@
 from typing import Any, Dict, Optional
-from services.customer_service import CustomerService
+from ..services.customer_service import CustomerService
 class CustomerLookupTools:
     """
     Customer Lookup Tool
@@ -22,6 +22,8 @@ class CustomerLookupTools:
         return tool(query_value)
     def find_by_id(self, customer_id: str) -> Optional[Dict[str, Any]]:
         return self.customer_service.get_profile_by_customer_id(customer_id)
+    def find_by_email(self,email: str) -> Optional[Dict[str, Any]]:
+        return self.customer_service.get_profile_by_email(email)
     def find_by_phone(self,phone: str) -> Optional[Dict[str, Any]]:
         return self.customer_service.get_profile_by_phone(phone)
     def find_by_order(self,order_id: str) -> Optional[Dict[str, Any]]:

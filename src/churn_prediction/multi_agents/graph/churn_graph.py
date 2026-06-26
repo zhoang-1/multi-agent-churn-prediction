@@ -10,6 +10,11 @@ churn_agent = ChurnAgent(str(CHURN_MODEL_PATH))
 churn_feature_builder = ChurnFeatureBuilder()
 
 def node_churn(state: ChurnState) -> ChurnState:
+    print("=" * 50)
+    print("STATE IN churn")
+    print(state.keys())
+    print(state.get("customer_profile"))
+    print("=" * 50)
     try:
         features = state.get("features")
         
