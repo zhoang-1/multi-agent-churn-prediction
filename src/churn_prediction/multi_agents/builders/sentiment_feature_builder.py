@@ -23,42 +23,178 @@ class SentimentFeatureBuilder:
     ]
 
     def build(self, customer_profile):
-        # 1. Initialize all features with default values
+        """
+        Build đúng 30 feature từ customer_profile theo cấu trúc MongoDB.
+        """
+
+        # =====================================================
+        # Default values
+        # =====================================================
         features = {name: 0 for name in self.FEATURE_NAMES}
-        # string features need a different default
-        features['rfm_segment'] = 'unknown'
-        features['favorite_payment_type'] = 'unknown'
-        features['customer_state'] = 'unknown'
+        features["rfm_segment"] = "unknown"
+        features["favorite_payment_type"] = "unknown"
+        features["customer_state"] = "unknown"
 
         orders = customer_profile.get("orders", [])
+
         if not orders:
             return features
 
-        df = pd.DataFrame(orders)
+        rows = []
 
-        # 2. Đảm bảo các cột dấu thời gian tồn tại
-        if 'order_purchase_timestamp' in df.columns:
-            df['order_purchase_timestamp'] = pd.to_datetime(df['order_purchase_timestamp'])
-        else:
-            df['order_purchase_timestamp'] = pd.Timestamp.now()
+        for order in orders:
 
-        if 'order_delivered_customer_date' in df.columns:
-            df['order_delivered_customer_date'] = pd.to_datetime(df['order_delivered_customer_date'])
-        if 'order_estimated_delivery_date' in df.columns:
-            df['order_estimated_delivery_date'] = pd.to_datetime(df['order_estimated_delivery_date'])
+            payment = order.get("payment", {})
+            delivery = order.get("delivery", {})
+            review = order.get("review", {})
+            items = order.get("items", [])
 
-        # 3. Tính toán các cột hỗ trợ nếu thiếu dữ liệu.
-        if 'delivery_time_days' not in df.columns and 'order_delivered_customer_date' in df.columns:
-            df['delivery_time_days'] = (
-                df['order_delivered_customer_date'] - df['order_purchase_timestamp']
-            ).dt.days
+            purchase_date = pd.to_datetime(
+                order.get("order_date"),
+                errors="coerce"
+            )
 
-        if 'estimated_delivery_days' not in df.columns and 'order_estimated_delivery_date' in df.columns:
-            df['estimated_delivery_days'] = (
-                df['order_estimated_delivery_date'] - df['order_purchase_timestamp']
-            ).dt.days
+            delivered_date = pd.to_datetime(
+                delivery.get("delivered_date"),
+                errors="coerce"
+            )
 
-        # 4. Update features from each sub‑builder
+            estimated_days = delivery.get("estimated_days", 0)
+            actual_days = delivery.get("actual_days", 0)
+
+            # Nếu không có item vẫn tạo 1 record
+            if not items:
+                items = [{}]
+
+            seller_ids = []
+            product_categories = []
+
+            total_products = 0
+
+            for item in items:
+
+                seller = item.get("seller_id")
+                if seller:
+                    seller_ids.append(seller)
+
+                category = item.get("category")
+                if category:
+                    product_categories.append(category)
+
+                total_products += item.get("quantity", 0)
+
+            rows.append({
+
+                # ==========================
+                # Order
+                # ==========================
+                "order_purchase_timestamp": purchase_date,
+
+                "order_delivered_customer_date": delivered_date,
+
+                "order_estimated_delivery_date":
+                    purchase_date + pd.Timedelta(days=estimated_days)
+                    if pd.notna(purchase_date)
+                    else pd.NaT,
+
+                "delivery_time_days": actual_days,
+
+                "estimated_delivery_days": estimated_days,
+
+                # ==========================
+                # Payment
+                # ==========================
+                "payment_type": payment.get("method", "unknown"),
+
+                "payment_installments":
+                    payment.get("installments", 1),
+
+                "total_payment":
+                    payment.get("total_payment", 0),
+
+                # ==========================
+                # Freight
+                # ==========================
+                "avg_freight":
+                    delivery.get("freight_value", 0),
+
+                # ==========================
+                # Review
+                # ==========================
+                "days_to_answer":
+                    review.get("answer_time_days", 0),
+
+                "num_comment_messages":
+                    1 if review.get("comment") else 0,
+
+                "num_comment_titles":
+                    1 if review.get("score") is not None else 0,
+
+                # ==========================
+                # Items
+                # ==========================
+                "num_products": total_products,
+
+                "seller_ids": seller_ids,
+
+                "product_categories": product_categories,
+
+                # ==========================
+                # Customer
+                # ==========================
+                "customer_state":
+                    customer_profile.get("customer", {})
+                    .get("address", {})
+                    .get("state", "unknown")
+            })
+
+        df = pd.DataFrame(rows)
+
+        if df.empty:
+            return features
+
+        # =====================================================
+        # Convert datetime
+        # =====================================================
+
+        for col in [
+            "order_purchase_timestamp",
+            "order_delivered_customer_date",
+            "order_estimated_delivery_date"
+        ]:
+            if col in df.columns:
+                df[col] = pd.to_datetime(
+                    df[col],
+                    errors="coerce"
+                )
+
+        # =====================================================
+        # Numeric columns
+        # =====================================================
+
+        numeric_cols = [
+            "delivery_time_days",
+            "estimated_delivery_days",
+            "payment_installments",
+            "total_payment",
+            "avg_freight",
+            "days_to_answer",
+            "num_comment_messages",
+            "num_comment_titles",
+            "num_products"
+        ]
+
+        for col in numeric_cols:
+            if col in df.columns:
+                df[col] = (
+                    pd.to_numeric(df[col], errors="coerce")
+                    .fillna(0)
+                )
+
+        # =====================================================
+        # Build features
+        # =====================================================
+
         features.update(self._build_rfm(df))
         features.update(self._build_delivery(df))
         features.update(self._build_payment(df))
@@ -66,16 +202,38 @@ class SentimentFeatureBuilder:
         features.update(self._build_trend(df))
         features.update(self._build_behavior(df))
 
-        # 5. Bước dọn dẹp thay thế bất kỳ giá trị NaN hoặc khóa bị thiếu nào.
+        # =====================================================
+        # Clean NaN
+        # =====================================================
+
         for key in self.FEATURE_NAMES:
-            if key not in features or pd.isna(features[key]):
-                if key in ['rfm_segment', 'favorite_payment_type', 'customer_state']:
-                    features[key] = 'unknown'
-                else:
-                    features[key] = 0
+
+            if key not in features:
+                features[key] = (
+                    "unknown"
+                    if key in [
+                        "rfm_segment",
+                        "favorite_payment_type",
+                        "customer_state"
+                    ]
+                    else 0
+                )
+
+            if pd.isna(features[key]):
+                features[key] = (
+                    "unknown"
+                    if key in [
+                        "rfm_segment",
+                        "favorite_payment_type",
+                        "customer_state"
+                    ]
+                    else 0
+                )
+
+            if isinstance(features[key], np.generic):
+                features[key] = features[key].item()
 
         return features
-
     # ------------------------------------------------------------------
     # Các thành phần con – mỗi thành phần trả về chính xác các khóa cho nhóm của nó.
     # ------------------------------------------------------------------

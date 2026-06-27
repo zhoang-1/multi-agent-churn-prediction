@@ -54,29 +54,28 @@ Huấn luyện Churn Prediction Model
 
 ## Kiến trúc tổng thể
 
-User
+                    User
+
+                    ↓
+
+                    FastAPI
+
+                    ↓
+
+                    MongoDB
+
+                    ↓
+
+                Data Agent
+
+                   
+↓                                ↓  
+
+Sentiment Agent             Churn Agent
 
 ↓
 
-FastAPI
 
-↓
-
-MongoDB
-
-↓
-
-Data Agent
-
-↓
-
-Sentiment Agent
-
-↓
-
-Churn Agent
-
-↓
 
 Report Agent
 

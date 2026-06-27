@@ -3,6 +3,7 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import DataEntry from './pages/DataEntry';
 import Products from './pages/Products';
+import CustomerDetail from './pages/CustomerDetail';
 
 function App() {
   return (
@@ -10,6 +11,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
+          <Route path="customer/:id" element={<CustomerDetail />} />
           <Route path="data-entry" element={<DataEntry />} />
           <Route path="products" element={<Products />} />
         </Route>

@@ -5,7 +5,6 @@ from datetime import datetime, timedelta, timezone
 from faker import Faker
 from tqdm import tqdm
 
-# Thêm thư mục hiện tại vào sys.path để import connection
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from connection import db
 
@@ -13,8 +12,16 @@ fake = Faker()
 
 # --- Cấu hình ---
 NUM_CUSTOMERS = 500
-NUM_ORDERS = 4000
+# Mỗi khách có từ 20-30 đơn -> tổng ~ 12.500
+MIN_ORDERS_PER_CUSTOMER = 20
+MAX_ORDERS_PER_CUSTOMER = 30
 PRODUCT_COUNT = 200
+
+# --- Khoảng thời gian để tạo đơn hàng (tất cả đều cũ, không có đơn gần đây) ---
+# Chúng ta sẽ tạo đơn từ 6 tháng trước đến 2 tháng trước (tính từ hiện tại)
+# Điều này tạo hiệu ứng churn: khách hàng không mua gì trong 2 tháng cuối.
+END_DATE_OFFSET_DAYS = 60   # 2 tháng trước
+START_DATE_OFFSET_DAYS = 180 # 6 tháng trước
 
 # --- Dữ liệu mẫu ---
 CATEGORIES = [
@@ -31,9 +38,7 @@ NEGATIVE = ["Very disappointed.", "Late delivery.", "Poor quality.", "Terrible e
 def utc_now():
     return datetime.now(timezone.utc)
 
-# --- 1. Xoá dữ liệu cũ (nếu muốn chạy lại từ đầu) ---
-print("Xoá dữ liệu cũ trong collections (tuỳ chọn)...")
-# Bỏ comment 2 dòng dưới nếu bạn muốn reset toàn bộ dữ liệu trước khi insert
+# --- 1. Xoá dữ liệu cũ nếu cần ---
 # db.customers.delete_many({})
 # db.orders.delete_many({})
 
@@ -48,20 +53,37 @@ for i in range(1, PRODUCT_COUNT + 1):
         "base_price": round(random.uniform(10, 500), 2)
     })
 
-# --- 3. Phân bổ 4000 đơn hàng cho 500 khách ---
-order_counts = [1] * NUM_CUSTOMERS
-remaining = NUM_ORDERS - NUM_CUSTOMERS
-while remaining > 0:
-    idx = random.randint(0, NUM_CUSTOMERS - 1)
-    if order_counts[idx] < 15:  # Giới hạn tối đa 15 đơn/khách để dữ liệu đa dạng
-        order_counts[idx] += 1
-        remaining -= 1
+# --- 3. Xác định số đơn hàng cho mỗi khách (từ 20 đến 30) ---
+order_counts = []
+total_orders = 0
+for _ in range(NUM_CUSTOMERS):
+    cnt = random.randint(MIN_ORDERS_PER_CUSTOMER, MAX_ORDERS_PER_CUSTOMER)
+    order_counts.append(cnt)
+    total_orders += cnt
+
+print(f"Tổng số đơn hàng sẽ được tạo: {total_orders}")
 
 # --- 4. Sinh dữ liệu khách hàng và đơn hàng ---
 print("Đang sinh dữ liệu khách hàng và đơn hàng...")
 customers_to_insert = []
 orders_to_insert = []
 order_counter = 1
+
+# Các mốc thời gian
+now = utc_now()
+start_date = now - timedelta(days=START_DATE_OFFSET_DAYS)
+end_date = now - timedelta(days=END_DATE_OFFSET_DAYS)
+# Đảm bảo start_date < end_date
+if start_date >= end_date:
+    # fallback
+    start_date = now - timedelta(days=180)
+    end_date = now - timedelta(days=60)
+
+# Hàm chọn ngẫu nhiên một ngày trong khoảng [start_date, end_date]
+def random_order_date():
+    delta = end_date - start_date
+    random_days = random.randint(0, delta.days)
+    return start_date + timedelta(days=random_days)
 
 for cust_idx in tqdm(range(1, NUM_CUSTOMERS + 1), desc="Xử lý khách hàng"):
     customer_id = f"CUST{cust_idx:05d}"
@@ -88,34 +110,22 @@ for cust_idx in tqdm(range(1, NUM_CUSTOMERS + 1), desc="Xử lý khách hàng"):
         "last_order_date": None
     }
 
-    # Sinh đơn hàng cho khách này
+    # Sinh đơn hàng cho khách này – tất cả đều trong khoảng thời gian cũ
     for _ in range(num_orders):
-        days_ago = random.randint(1, 700)
-        order_date = utc_now() - timedelta(days=days_ago)
+        order_date = random_order_date()
 
-        # Trạng thái dựa trên ngày tạo
-        if days_ago < 7:
-            status = random.choices(["pending", "processing", "shipped"], weights=[0.3, 0.4, 0.3])[0]
-        elif days_ago < 30:
-            status = random.choices(["shipped", "delivered"], weights=[0.2, 0.8])[0]
-        else:
-            status = random.choices(["delivered", "returned", "canceled"], weights=[0.8, 0.15, 0.05])[0]
+        # Vì đơn hàng đều cũ (> 2 tháng), nên trạng thái chỉ có thể là delivered, returned, canceled
+        status = random.choices(["delivered", "returned", "canceled"], weights=[0.8, 0.15, 0.05])[0]
 
         # Thanh toán
         method = random.choice(PAYMENT_METHODS)
         installments = random.randint(1, 12) if method in ["credit_card", "debit_card"] else 1
 
-        # Giao hàng
+        # Giao hàng – đã hoàn tất
         estimated_days = random.randint(1, 10)
-        if status in ["delivered", "returned", "canceled"]:
-            actual_days = max(1, estimated_days + random.randint(-2, 5))
-            delivered_date = order_date if status == "delivered" else None
-            delivery_delay = actual_days - estimated_days
-        else:
-            actual_days = estimated_days  # BẮT BUỘC phải là int (không được null)
-            delivered_date = None
-            delivery_delay = None
-
+        actual_days = max(1, estimated_days + random.randint(-2, 5))
+        delivered_date = order_date if status == "delivered" else None
+        delivery_delay = actual_days - estimated_days
         freight_value = round(random.uniform(10, 50), 2)
 
         # Sản phẩm (1-3 món)
@@ -163,20 +173,20 @@ for cust_idx in tqdm(range(1, NUM_CUSTOMERS + 1), desc="Xử lý khách hàng"):
         order = {
             "order_id": f"ORD{order_counter:06d}",
             "customer_id": customer_id,
-            "order_date": order_date,          # Python datetime => pymongo tự chuyển thành BSON Date
+            "order_date": order_date,
             "order_status": status,
             "payment": {
                 "method": method,
                 "installments": installments,
                 "total_payment": total_payment,
-                "payment_sequence": []         # Schema yêu cầu là array (có thể rỗng)
+                "payment_sequence": []
             },
             "delivery": {
                 "estimated_days": estimated_days,
-                "actual_days": actual_days,    # Luôn là int
+                "actual_days": actual_days,
                 "freight_value": freight_value,
-                "delivered_date": delivered_date,  # datetime hoặc None
-                "delivery_delay": delivery_delay   # int hoặc None
+                "delivered_date": delivered_date,
+                "delivery_delay": delivery_delay
             },
             "items": items,
             "review": review,
@@ -187,34 +197,39 @@ for cust_idx in tqdm(range(1, NUM_CUSTOMERS + 1), desc="Xử lý khách hàng"):
         orders_to_insert.append(order)
         order_counter += 1
 
-        # Cập nhật tổng chi tiêu cho khách hàng
+        # Cập nhật tổng chi tiêu
         total_spent += total_payment
         if last_order_date is None or order_date > last_order_date:
             last_order_date = order_date
 
-    # Gán tổng chi tiêu và ngày mua cuối cho khách
+    # Gán tổng chi tiêu và ngày mua cuối
     customer["total_spent"] = round(total_spent, 2)
     customer["last_order_date"] = last_order_date
     customers_to_insert.append(customer)
 
 # --- 5. Insert vào MongoDB ---
-print("\nĐang insert khách hàng vào MongoDB...")
+print("\nĐang insert khách hàng...")
 try:
     result_cust = db.customers.insert_many(customers_to_insert)
-    print(f"Đã insert thành công {len(result_cust.inserted_ids)} khách hàng.")
+    print(f"✅ Insert thành công {len(result_cust.inserted_ids)} khách hàng.")
 except Exception as e:
-    print(f"Lỗi insert khách hàng: {e}")
+    print(f"❌ Lỗi: {e}")
 
-print("Đang insert đơn hàng vào MongoDB...")
+print("Đang insert đơn hàng...")
 try:
-    # insert_many với ordered=False để bỏ qua lỗi trùng lặp (nếu có)
     result_ord = db.orders.insert_many(orders_to_insert, ordered=False)
-    print(f"Đã insert thành công {len(result_ord.inserted_ids)} đơn hàng.")
+    print(f"✅ Insert thành công {len(result_ord.inserted_ids)} đơn hàng.")
 except Exception as e:
-    print(f"Lỗi insert đơn hàng: {e}")
+    print(f"❌ Lỗi: {e}")
 
 # --- 6. Kiểm tra ---
 print("\n--- XÁC NHẬN ---")
-print(f"Tổng khách hàng trong DB: {db.customers.count_documents({})}")
-print(f"Tổng đơn hàng trong DB: {db.orders.count_documents({})}")
-print("Hoàn tất!")
+print(f"Tổng khách hàng: {db.customers.count_documents({})}")
+print(f"Tổng đơn hàng: {db.orders.count_documents({})}")
+
+# Kiểm tra ngày tháng của đơn hàng mới nhất
+latest_order = db.orders.find_one(sort=[("order_date", -1)])
+if latest_order:
+    print(f"Ngày đơn hàng mới nhất: {latest_order['order_date']}")
+
+print("Hoàn tất! 🎉")

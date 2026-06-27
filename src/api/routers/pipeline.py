@@ -2,12 +2,16 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from src.churn_prediction.multi_agents.services.pipeline_service import PipelineService
-
+from src.churn_prediction.multi_agents.services.customer_service import CustomerService
+customer_service = CustomerService()
 router = APIRouter(
         prefix="/api",
         tags=["Multi-Agent Pipeline"]
     )
-
+router = APIRouter(
+    prefix="/customers",
+    tags=["Customers"]
+)
 class CustomerRequest(BaseModel):
     customer_id: Optional[str] = None
     email: Optional[str] = None
@@ -19,7 +23,15 @@ def health_check():
     "status": "running",
     "service": "multi-agent-churn-prediction"
     }
-
+@router.get("")
+def get_all_customers(
+    page: int = 1,
+    limit: int = 20
+):
+    return {
+        "success": True,
+        **customer_service.get_all_customers(page, limit)
+    }
 @router.post("/data")
 def run_data_pipeline(request: CustomerRequest):
     try:

@@ -79,3 +79,42 @@ class CustomerService:
         new_customer["_id"] = str(result.inserted_id)
         new_customer["orders"] = []
         return new_customer
+    def get_all_customers(self,page: int = 1,limit: int = 20) -> Dict[str, Any]:
+        """
+        Lấy danh sách khách hàng có phân trang.
+        """
+
+        skip = (page - 1) * limit
+
+        total = customers.count_documents({})
+
+        customer_list = list(
+            customers.find({})
+            .sort("created_at", -1)
+            .skip(skip)
+            .limit(limit)
+        )
+
+        results = []
+
+        for customer in customer_list:
+
+            customer["_id"] = str(customer["_id"])
+
+            customer_id = customer["customer_id"]
+
+            order_count = orders.count_documents({
+                "customer_id": customer_id
+            })
+
+            customer["total_orders"] = order_count
+
+            results.append(customer)
+
+        return {
+            "page": page,
+            "limit": limit,
+            "total": total,
+            "total_pages": (total + limit - 1) // limit,
+            "customers": results
+        }
