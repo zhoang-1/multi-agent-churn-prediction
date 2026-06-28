@@ -9,7 +9,7 @@ router = APIRouter(
         tags=["Multi-Agent Pipeline"]
     )
 router = APIRouter(
-    prefix="/customers",
+    prefix="/api",
     tags=["Customers"]
 )
 class CustomerRequest(BaseModel):
@@ -23,7 +23,7 @@ def health_check():
     "status": "running",
     "service": "multi-agent-churn-prediction"
     }
-@router.get("")
+@router.get("/customers")
 def get_all_customers(
     page: int = 1,
     limit: int = 20

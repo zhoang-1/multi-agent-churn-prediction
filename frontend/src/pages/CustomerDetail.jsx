@@ -26,78 +26,68 @@ export default function CustomerDetail() {
   useEffect(() => {
     const fetchCustomerData = async () => {
       setLoading(true);
-      try {
-        const query = { customer_id: id };
-        const dataRes = await customerApi.getData(query).catch(() => null);
-        const sentimentRes = await customerApi.getSentiment(query).catch(() => null);
-        const churnRes = await customerApi.getChurn(query).catch(() => null);
-        const reportRes = await customerApi.getReport(query).catch(() => null);
+      const query = { customer_id: id };
 
-        if (dataRes && dataRes.data) {
-          const customerData = Array.isArray(dataRes.data) ? dataRes.data[0] : dataRes.data;
-          if (customerData && customerData.customer_profile) {
+      // Run /data and /report in parallel
+      const [dataRes, reportRes] = await Promise.allSettled([
+        customerApi.getData(query),
+        customerApi.getReport(query),
+      ]);
+
+      // --- /data: thông tin khách hàng + đơn hàng ---
+      try {
+        const d = dataRes.status === 'fulfilled' ? dataRes.value : null;
+        if (d?.data) {
+          const customerData = Array.isArray(d.data) ? d.data[0] : d.data;
+          if (customerData?.customer_profile) {
             const profile = customerData.customer_profile;
             setCustomerInfo({
               name: profile.full_name || 'Unknown',
-              email: profile.email || query.email || '',
-              phone: profile.phone || query.phone || '',
-              address: profile.address || null
+              email: profile.email || '',
+              phone: profile.phone || '',
+              address: profile.address || null,
             });
             setOrders(profile.orders || []);
-          } else {
-            throw new Error("Empty data returned");
           }
-        } else {
-          // Fallback mock
-          setCustomerInfo({
-            name: 'Nguyễn Văn A',
-            email: 'nguyenvana@example.com',
-            phone: '0901234567',
-            address: { street: '123 Le Loi', ward: 'Ben Nghe', district: 'Q1', city: 'Ho Chi Minh' }
-          });
-          setOrders([
-            {
-              order_id: 'ORD-001',
-              order_date: '2026-06-25T10:00:00Z',
-              status: 'Delivered',
-              payment: { total_amount: 1500000, method: 'Credit Card' },
-              items: [{ product_name: 'Product A', quantity: 1, total_price: 1500000 }]
-            }
-          ]);
         }
+      } catch (e) { console.warn('/data parse error', e); }
 
-        // Set Sentiment
-        if (sentimentRes?.sentiment?.sentiment_result?.label) {
-           const label = sentimentRes.sentiment.sentiment_result.label;
-           setSentiment(label.charAt(0).toUpperCase() + label.slice(1));
-        }
+      // --- /report: bao gồm sentiment + churn + báo cáo + hành động ---
+      try {
+        const r = reportRes.status === 'fulfilled' ? reportRes.value : null;
+        if (r?.report) {
+          const reportData = r.report;
 
-        // Set Churn
-        if (churnRes?.churn?.churn_result?.churn_probability !== undefined) {
-          setChurnProb(churnRes.churn.churn_result.churn_probability);
-        } else {
-          setChurnProb(0.25);
-        }
-
-        // Set Report and Action Plan
-        if (reportRes?.report) {
-          if (reportRes.report.report) {
-            setReport(reportRes.report.report);
+          // Lấy sentiment từ report
+          if (reportData.sentiment_result?.label) {
+            const label = reportData.sentiment_result.label;
+            setSentiment(label.charAt(0).toUpperCase() + label.slice(1));
           }
-          if (reportRes.report.action_plan?.detail) {
-            setActionPlan(reportRes.report.action_plan.detail);
+
+          // Lấy churn từ report
+          if (reportData.churn_result?.churn_probability !== undefined) {
+            setChurnProb(reportData.churn_result.churn_probability);
+          }
+
+          // Lấy nội dung báo cáo
+          if (reportData.report) {
+            setReport(reportData.report);
+          }
+
+          // Lấy hành động khuyến nghị
+          if (reportData.action_plan?.detail) {
+            setActionPlan(reportData.action_plan.detail);
           }
         } else {
           setReport('Không thể tải báo cáo từ API.');
           setActionPlan('Không có hành động khuyến nghị nào.');
         }
-
-      } catch (err) {
-        setError('Không thể tải dữ liệu khách hàng.');
-        console.error(err);
-      } finally {
-        setLoading(false);
+      } catch (e) {
+        console.warn('/report parse error', e);
+        setReport('Lỗi khi tải báo cáo.');
       }
+
+      setLoading(false);
     };
 
     if (id) {

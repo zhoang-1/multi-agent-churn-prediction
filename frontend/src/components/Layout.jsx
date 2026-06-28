@@ -15,7 +15,7 @@ const Layout = () => {
         <div className="p-6 border-b border-slate-200">
           <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-600 flex items-center gap-2">
             <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center text-white text-lg">C</span>
-            ChurnApp
+            Dashboard
           </h1>
         </div>
         
